@@ -1896,6 +1896,8 @@ export type ImportCounts = {
   attachments: number;
   skipped: number;
   failed: number;
+  threaded: number;
+  thread_total: number;
 };
 export type ImportTotals = { tickets: number | null; articles: number | null };
 export type ImportProblem = { at: string; item: string; message: string };
@@ -1936,7 +1938,7 @@ export type Import = {
   source: ImportSource;
   account: { name: string; url: string };
   status: ImportStatus;
-  phase: "articles" | "tickets" | "done";
+  phase: "articles" | "tickets" | "threading" | "done";
   run: number;
   options: ImportOptions;
   mapping: ImportMapping;
