@@ -29,10 +29,16 @@ import (
 const (
 	maxBodyHTML       = 1 << 20
 	maxBodyText       = 200_000
-	maxAttachments    = 20
 	maxRecipients     = 50
 	maxMessages       = 2000
 	articleExcerptLen = 200
+)
+
+// Limits on one message's files, the same for every source: at most maxMessageFiles
+// files and maxMessageBytes in all, each file also within hd.MaxAttachmentBytes.
+var (
+	maxMessageFiles       = 500
+	maxMessageBytes int64 = 250 << 20
 )
 
 // errStopped means the import was paused, canceled or moved on to another generation
@@ -218,7 +224,9 @@ type copied struct {
 
 // copyFiles stores the attachments of the messages that will be written, before the
 // write's transaction. A file that cannot be copied is a problem; a rate limit or a
-// refused credential stops the ticket so it is tried again.
+// refused credential stops the ticket so it is tried again. Each message keeps its first
+// maxMessageFiles files, and files only while they fit in maxMessageBytes; what does not
+// fit is one problem per message and limit.
 func (w *writer) copyFiles(ctx context.Context, t *source.Ticket, msgs []source.Message) (map[string][]copied, error) {
 	out := map[string][]copied{}
 	if !w.x.Options.Attachments {
@@ -226,16 +234,27 @@ func (w *writer) copyFiles(ctx context.Context, t *source.Ticket, msgs []source.
 	}
 	item := "Ticket " + t.Ref
 	for _, m := range msgs {
-		for i, a := range m.Attachments {
-			if i >= maxAttachments {
-				w.problem(item, fmt.Sprintf("Only the first %d attachments of a message were copied.", maxAttachments))
-				break
-			}
+		files := m.Attachments
+		if extra := len(files) - maxMessageFiles; extra > 0 {
+			w.problem(item, fmt.Sprintf("%d %s past a message's first %d %s left out.", extra, plural(extra, "file", "files"), maxMessageFiles,
+				plural(extra, "was", "were")))
+			files = files[:maxMessageFiles]
+		}
+		left, tooMuch := maxMessageBytes, 0
+		for _, a := range files {
 			if a.Size > hd.MaxAttachmentBytes {
 				w.problem(item, fmt.Sprintf("%s is over 25 MB, so it was left out.", hd.CleanFilename(a.Name)))
 				continue
 			}
-			id, err := w.copyFile(ctx, a)
+			if a.Size > left || left == 0 {
+				tooMuch++
+				continue
+			}
+			id, size, err := w.copyFile(ctx, a, left)
+			if errors.Is(err, errMessageFull) {
+				tooMuch++
+				continue
+			}
 			if err != nil {
 				if stopping(err) {
 					return nil, err
@@ -243,39 +262,60 @@ func (w *writer) copyFiles(ctx context.Context, t *source.Ticket, msgs []source.
 				w.problem(item, fmt.Sprintf("%s could not be copied: %s", hd.CleanFilename(a.Name), plain(err)))
 				continue
 			}
+			left -= size
 			out[m.ID] = append(out[m.ID], copied{id: id, inline: a.Inline, url: a.URL})
 			w.x.Counts.Attachments++
+		}
+		if tooMuch > 0 {
+			w.problem(item, fmt.Sprintf("%d %s left out: the files of one message are limited to %d MB in all.",
+				tooMuch, plural(tooMuch, "file was", "files were"), maxMessageBytes>>20))
 		}
 	}
 	return out, nil
 }
 
-func (w *writer) copyFile(ctx context.Context, a source.Attachment) (uuid.UUID, error) {
+// plural is one when n is 1, else many.
+func plural(n int, one, many string) string {
+	if n == 1 {
+		return one
+	}
+	return many
+}
+
+// errMessageFull means a file does not fit in what is left of its message's maxMessageBytes.
+var errMessageFull = errors.New("the message's files are over their total")
+
+// copyFile stores one file of at most left bytes, and answers its size.
+func (w *writer) copyFile(ctx context.Context, a source.Attachment, left int64) (uuid.UUID, int64, error) {
+	limit := min(int64(hd.MaxAttachmentBytes), left)
 	var data []byte
 	if a.Data != nil {
 		data = a.Data
 	} else {
 		rc, err := w.src.Download(ctx, a)
 		if err != nil {
-			return uuid.Nil, err
+			return uuid.Nil, 0, err
 		}
 		defer rc.Close()
-		if data, err = io.ReadAll(io.LimitReader(rc, hd.MaxAttachmentBytes+1)); err != nil {
-			return uuid.Nil, err
+		if data, err = io.ReadAll(io.LimitReader(rc, limit+1)); err != nil {
+			return uuid.Nil, 0, err
 		}
 	}
 	if len(data) > hd.MaxAttachmentBytes {
-		return uuid.Nil, errors.New("it is over 25 MB")
+		return uuid.Nil, 0, errors.New("it is over 25 MB")
+	}
+	if int64(len(data)) > left {
+		return uuid.Nil, 0, errMessageFull
 	}
 	if len(data) == 0 {
-		return uuid.Nil, errors.New("the file is empty")
+		return uuid.Nil, 0, errors.New("the file is empty")
 	}
 	att, err := hd.SaveUpload(ctx, w.s.d.Storage, w.s.d.DB.Pool, hd.Upload{WorkspaceID: w.x.WorkspaceID, Filename: a.Name,
 		Size: int64(len(data)), Body: bytes.NewReader(data)})
 	if err != nil {
-		return uuid.Nil, err
+		return uuid.Nil, 0, err
 	}
-	return att.ID, nil
+	return att.ID, int64(len(data)), nil
 }
 
 // stopping reports errors that stop the run rather than one item: the source's rate
