@@ -172,7 +172,7 @@ the encoding, a line that cannot be read, more than 500,000 rows, no rows under 
   ticket status category: `open` → open, `waiting` → pending, `resolved` → solved; CSV by name (below), closed without a status. A status opendesk does not know is closed;
   `statuses: "closed"` closes them all. Solved and closed tickets keep when they were solved.
 - Skipped (`counts.skipped`): Zendesk deleted tickets; Help Scout spam, deleted and draft conversations;
-  Freshdesk spam and deleted tickets; Front spam, deleted and trashed conversations, discussions and tasks.
+  Freshdesk spam and deleted tickets; Front spam, deleted and trashed conversations, discussions and tasks, and conversations merged into another one.
 - Priorities map to low, normal, high, urgent: Zendesk as they are (none is normal); Freshdesk 1 low,
   2 normal, 3 high, 4 urgent; Intercom `priority` is high, else normal; Help Scout and Front normal.
 - Channels by how the ticket arrived: email, chat, api (phone calls, API and messages the team started)
@@ -184,7 +184,7 @@ the encoding, a line that cannot be read, more than 500,000 rows, no rows under 
   are left out; a Front conversation that is not email (chat, SMS, social) is tagged `front-<channel>`.
   Front's read-receipt pixel is dropped and images it proxied get their original link back. Front emails in
   conversations last active within 180 days carry `message_id`, `in_reply_to` and `references`, read from
-  `GET /messages/{id}` as `message/rfc822` (headers only); an offline copy import reads none.
+  `GET /messages/{id}` as `message/rfc822` (headers only).
 - Attachments are copied here (25 MB per file, programs refused); inline images point at the copies.
   The plan bounds how many files one message brings, their size in all, and what imports bring into a
   workspace in all (contracts/billing.md "Imports"); a self-hosted instance has none of these limits.
