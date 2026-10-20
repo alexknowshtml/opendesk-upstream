@@ -1030,6 +1030,84 @@ func TestOneBadTicketDoesNotStopTheRest(t *testing.T) {
 	}
 }
 
+func TestAttachmentLimitsPerMessage(t *testing.T) {
+	e := newEnv(t)
+	keepFiles, keepBytes := maxMessageFiles, maxMessageBytes
+	t.Cleanup(func() { maxMessageFiles, maxMessageBytes = keepFiles, keepBytes })
+	const mb = 1 << 20
+	maxMessageFiles, maxMessageBytes = 5, 10*mb
+
+	bob := &source.Person{ID: "u1", Email: "bob@customer.test", Name: "Bob"}
+	e.f.articles = nil
+	e.f.files = map[string][]byte{}
+	attach := func(prefix string, sizes ...int) []source.Attachment {
+		var out []source.Attachment
+		for i, n := range sizes {
+			url := "https://files.test/" + prefix + strconv.Itoa(i)
+			e.f.files[url] = bytes.Repeat([]byte("x"), n*mb)
+			out = append(out, source.Attachment{ID: prefix + strconv.Itoa(i), Name: prefix + strconv.Itoa(i) + ".txt", URL: url})
+		}
+		return out
+	}
+	// many: seven files of 1 MB, two past the count. big: 4+4 MB fit, 5 MB does not, 2 MB still does;
+	// a declared size over what is left is not downloaded. other: the next message has its own 10 MB.
+	big := attach("big", 4, 4, 5, 2)
+	big = append(big, source.Attachment{ID: "declared", Name: "declared.txt", URL: "https://files.test/declared", Size: 3 * mb})
+	e.f.tickets = []source.Ticket{
+		{ID: "1", Ref: "#1", Subject: "Many", Status: "open", Requester: bob, CreatedAt: base, UpdatedAt: base, Loaded: true,
+			Messages: []source.Message{{ID: "1-1", Author: *bob, Text: "Files", CreatedAt: base, Attachments: attach("many", 1, 1, 1, 1, 1, 1, 1)}}},
+		{ID: "2", Ref: "#2", Subject: "Big", Status: "open", Requester: bob, CreatedAt: base, UpdatedAt: base, Loaded: true,
+			Messages: []source.Message{
+				{ID: "2-1", Author: *bob, Text: "Big files", CreatedAt: base, Attachments: big},
+				{ID: "2-2", Author: *bob, Text: "More", CreatedAt: base.Add(time.Minute), Attachments: attach("other", 9)},
+			}},
+	}
+	x := e.start(t, e.zendeskBody())
+	done := e.drive(t, x.ID)
+	if done.Status != StatusCompleted || done.Counts.Tickets != 2 || done.Counts.Failed != 0 {
+		t.Fatalf("finished %s %+v problems %+v", done.Status, done.Counts, done.Problems)
+	}
+	if done.Counts.Attachments != 5+3+1 {
+		t.Errorf("attachments %d, want 9 (problems %+v)", done.Counts.Attachments, done.Problems)
+	}
+	perMessage := func(ref string) []int {
+		rows, err := e.D.DB.Pool.Query(e.Ctx, `SELECT (SELECT count(*) FROM attachments a WHERE a.message_id = m.id)::int
+			FROM messages m WHERE ticket_id = $1 ORDER BY created_at`, e.ticketByRef(t, ref))
+		if err != nil {
+			t.Fatal(err)
+		}
+		out, err := pgx.CollectRows(rows, pgx.RowTo[int])
+		if err != nil {
+			t.Fatal(err)
+		}
+		return out
+	}
+	if got := perMessage("1"); !slices.Equal(got, []int{5}) {
+		t.Errorf("ticket 1 files per message %v", got)
+	}
+	if got := perMessage("2"); !slices.Equal(got, []int{3, 1}) {
+		t.Errorf("ticket 2 files per message %v", got)
+	}
+	var stored int64
+	e.Scalar(`SELECT coalesce(max(total), 0) FROM (SELECT sum(size_bytes) AS total FROM attachments WHERE workspace_id = $1
+		AND message_id IS NOT NULL GROUP BY message_id) s`, &stored, e.ws.ID)
+	if stored > maxMessageBytes {
+		t.Errorf("a message holds %d bytes of files", stored)
+	}
+	want := map[string]string{
+		"Ticket #1": "2 files past a message's first 5 were left out.",
+		"Ticket #2": "2 files were left out: the files of one message are limited to 10 MB in all.",
+	}
+	if len(done.Problems) != len(want) {
+		t.Fatalf("problems %+v", done.Problems)
+	}
+	for _, p := range done.Problems {
+		if want[p.Item] != p.Message {
+			t.Errorf("problem %s: %q, want %q", p.Item, p.Message, want[p.Item])
+		}
+	}
+}
+
 func TestIsolationAndRoles(t *testing.T) {
 	e := newEnv(t)
 	x := e.start(t, e.zendeskBody())
