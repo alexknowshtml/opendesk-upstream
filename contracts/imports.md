@@ -70,7 +70,7 @@ interface ImportProblem { at: string; item: string /* "Ticket #1234", "Article B
 interface ImportOptions {
   tickets: boolean;              // default true
   articles: boolean;             // default true; false for CSV and for an account without a help center
-  attachments: boolean;          // default true; files over 25 MB, programs and attachments past 20 per message are skipped
+  attachments: boolean;          // default true; files over 25 MB, programs, and files past 500 or 250 MB per message are skipped
   since: string | null;          // only tickets created on or after this day (YYYY-MM-DD)
   mailbox_id: string | null;     // email tickets reply from this mailbox (one of the workspace's)
   tag: string;                   // label added to every imported ticket; "" = none. Default "<source>-import"
@@ -179,8 +179,11 @@ the encoding, a line that cannot be read, more than 500,000 rows, no rows under 
   by an agent mapped to a member is that member's; an unmapped agent's keeps their name and address.
   Intercom bot replies (Fin, workflows) are the team's, named Fin. At most 2,000 messages per ticket
   (Intercom answers at most 500 parts of a conversation); the rest is listed in `problems`.
-- Attachments are copied here (25 MB per file, programs refused, 20 per message); inline images point
-  at the copies. Article HTML is sanitized as it is; its images stay where the source hosts them.
+- Attachments are copied here (25 MB per file, programs refused); inline images point at the copies.
+  One message brings at most 500 files and 250 MB of files in all, the same for every source: files
+  past the first 500 are left out, and so is each file that would take the message past 250 MB (a
+  smaller one after it still comes). Each limit a message reaches is one entry in `problems` with how
+  many files it left out. Article HTML is sanitized as it is; its images stay where the source hosts them.
 - Requesters become contacts, found by email (an existing contact is matched and only gets a name
   or phone it lacks) or created with their name and phone; companies are found by domain or name, or created.
 - Agents are not invited and teams are not created: they map to existing members and teams.

@@ -16,7 +16,7 @@ Imports run in the background. You can close the page, and an import that is int
 ## What comes over
 
 - **Tickets** with their whole conversation: every customer message, every reply and every internal note, with its author, time and formatting.
-- **Attachments**, copied into opendesk, with images in messages pointing at the copies. Files over 25 MB and programs are left out, as for any attachment, and so is anything past 20 files on one message.
+- **Attachments**, copied into opendesk, with images in messages pointing at the copies. Files over 25 MB and programs are left out, as for any attachment. One message brings up to 500 files and 250 MB of them in all, whatever the source; the files past either limit are left out and listed as a problem.
 - **Requesters**, as contacts with their name, email and phone. A customer who is already a contact here is matched by email instead of added twice.
 - **Companies**, from Zendesk organizations, Freshdesk companies and Intercom companies, matched to existing companies by domain or name.
 - **Labels**, from the source's tags, plus one label on every imported ticket (`zendesk-import`, for example) so you can find them all.
@@ -223,7 +223,7 @@ Import first, then connect the mailbox. A forwarded mailbox only brings in new e
 
 ## Watch it
 
-The import's page updates live: how many tickets, messages, contacts, companies, articles and attachments have come over, how many were skipped, and a list of **problems**, the latest 50, such as a ticket that could not be read or an attachment that was too large. A problem never stops the import: that item is left out and the rest goes on.
+The import's page updates live: how many tickets, messages, contacts, companies, articles and attachments have come over, how many were skipped, and a list of **problems**, the latest 50, such as a ticket that could not be read, an attachment that was too large, or the files past a message's limits. A problem never stops the import: that item is left out and the rest goes on.
 
 When the import is done, stops, or needs new credentials, whoever started it is notified in the app, by email, on their phone and on the desktop. Turn this off under **Imports** in your [notification settings](/guides/notifications/#choose-what-reaches-you).
 
