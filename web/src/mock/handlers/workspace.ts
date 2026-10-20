@@ -194,8 +194,8 @@ export function registerWorkspace() {
     }
     return null;
   };
-  get("/v1/invitations/lookup", (ctx) => {
-    const token = ctx.query.get("token") ?? "";
+  post("/v1/invitations/lookup", (ctx) => {
+    const token = required(ctx, "token");
     if (!token || token === "expired") throw new HttpError(404, "not_found", "This invitation has expired or was revoked");
     const f = findInvite(token);
     if (f) return { workspace_name: f.w.workspace.name, email: f.inv.email, role: f.inv.role };
@@ -264,7 +264,8 @@ export function registerWorkspace() {
     checkUrl(url);
     const events = strArr(ctx.body.events) ?? [];
     if (!events.length) throw invalid("Choose at least one event");
-    const hook: Webhook = { id: uuid(), url, description: s(ctx, "description") ?? "", events, enabled: ctx.body.enabled !== false, created_at: nowIso() };
+    // The mock's addresses echo the verification challenge, except ones that say they can't.
+    const hook: Webhook = { id: uuid(), url, description: s(ctx, "description") ?? "", events, enabled: ctx.body.enabled !== false, verified: !url.includes("noecho"), created_at: nowIso() };
     setGrants(ctx.ws, hook, privateTeams(ctx, []));
     ctx.ws.webhooks.unshift(hook);
     ctx.ws.deliveries[hook.id] = [];
@@ -287,6 +288,14 @@ export function registerWorkspace() {
     publish(ctx.ws, "webhook.deleted", { webhook_id: hook.id });
     audit(ctx.ws, "webhook.deleted", "webhook", hook.id);
     return respond(204);
+  });
+  post("/v1/webhooks/:id/verify", (ctx) => {
+    const hook = findHook(ctx);
+    const code = s(ctx, "code");
+    if (code !== undefined && code !== "whv_demo") throw invalid("That code does not match the last challenge sent to this address.");
+    if (code !== undefined || !hook.url.includes("noecho")) hook.verified = true;
+    publish(ctx.ws, "webhook.updated", { webhook: hook });
+    return respond(200, hook);
   });
   get("/v1/webhooks/:id/deliveries", (ctx) => paginate(ctx, ctx.ws.deliveries[findHook(ctx).id] ?? []));
   post("/v1/webhooks/:id/test", (ctx) => {

@@ -11,6 +11,7 @@ export const CLOUD_ORIGIN = "https://app.opendesk.sh";
 export const CLOUD_HOSTS = new Set(["opendesk.sh", "www.opendesk.sh", "app.opendesk.sh"]);
 export const UPDATE_INTERVAL_MS = 6 * 60 * 60 * 1000;
 /** Each desktop release's notes, by version. */
+export const DOWNLOAD_URL = "https://opendesk.sh/download/";
 export const RELEASE_NOTES_URL = (version: string) => `https://github.com/useopendesk/opendesk/releases/tag/desktop-v${encodeURIComponent(version)}`;
 export const OAUTH_TIMEOUT_MS = 10 * 60 * 1000;
 

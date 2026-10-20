@@ -1147,9 +1147,9 @@ function seedMargin(): WsData {
   keys[0].private_team_ids = [];
   ws.apiKeys = keys;
   const hooks: Webhook[] = [
-    { id: uuid(), url: "https://hooks.margin.app/opendesk", description: "Internal event bus", events: ["ticket.created", "ticket.updated", "message.created"], enabled: true, created_at: ago(100 * DAY),
+    { id: uuid(), url: "https://hooks.margin.app/opendesk", description: "Internal event bus", events: ["ticket.created", "ticket.updated", "message.created"], enabled: true, verified: true, created_at: ago(100 * DAY),
       private_team_ids: [teamId("Security")!], private_teams: [{ id: teamId("Security")!, name: "Security", granted_by: userRef(uid("priya")) }] },
-    { id: uuid(), url: "https://hooks.slack.com/services/T0001/B0002/XXXX", description: "Urgent tickets to #support-alerts", events: ["ticket.created"], enabled: true, created_at: ago(30 * DAY) },
+    { id: uuid(), url: "https://hooks.slack.com/services/T0001/B0002/XXXX", description: "Urgent tickets to #support-alerts", events: ["ticket.created"], enabled: true, verified: true, created_at: ago(30 * DAY) },
   ];
   ws.webhooks = hooks;
   for (const h of hooks) {
