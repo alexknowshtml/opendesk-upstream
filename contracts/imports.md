@@ -181,6 +181,8 @@ the encoding, a line that cannot be read, more than 500,000 rows, no rows under 
   (Intercom answers at most 500 parts of a conversation); the rest is listed in `problems`.
 - Attachments are copied here (25 MB per file, programs refused, 20 per message); inline images point
   at the copies. Article HTML is sanitized as it is; its images stay where the source hosts them.
+- NUL bytes (U+0000) are dropped from every text a ticket or article saves (subjects, bodies, names,
+  addresses, tags, file names, titles), since Postgres cannot store them. Source ids are kept as they are.
 - Requesters become contacts, found by email (an existing contact is matched and only gets a name
   or phone it lacks) or created with their name and phone; companies are found by domain or name, or created.
 - Agents are not invited and teams are not created: they map to existing members and teams.

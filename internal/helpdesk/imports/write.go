@@ -340,6 +340,7 @@ func (w *writer) writeTicket(ctx context.Context, t *source.Ticket) (outcome, er
 	if t.Skip {
 		return outcomeSkipped, nil
 	}
+	scrubTicket(t)
 	msgs := t.Messages
 	if len(msgs) > maxMessages {
 		w.problem("Ticket "+t.Ref, fmt.Sprintf("Only the first %d messages were imported.", maxMessages))
@@ -845,6 +846,7 @@ func (w *writer) company(ctx context.Context, tx pgx.Tx, rawName, rawDomain stri
 // writeArticle writes a help center article (and its collection) unless an earlier run
 // did. Articles are not announced one by one: lists refresh from import.updated.
 func (w *writer) writeArticle(ctx context.Context, a source.Article) error {
+	scrubArticle(&a)
 	counts := w.x.Counts
 	err := w.s.d.DB.Tx(ctx, func(tx pgx.Tx) error {
 		if err := w.begin(ctx, tx); err != nil {
