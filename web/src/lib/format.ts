@@ -132,6 +132,19 @@ export function weekdayClock(d: Date | string): string {
   return dtf({ weekday: "short", hour: "numeric", minute: "2-digit" }).format(new Date(d));
 }
 
+/** Whether times of day read on the 12-hour clock (the person's choice in the agent app, else the locale's). */
+export function twelveHour(): boolean {
+  const hc = dtf({ hour: "numeric", minute: "2-digit" }).resolvedOptions().hourCycle;
+  return hc === "h12" || hc === "h11";
+}
+
+/** A stored "HH:mm" time of day on the reader's clock: "9:00 AM" / "09:00". "24:00", the end of a day, reads "12:00 AM" on a 12-hour clock. */
+export function timeOfDay(hhmm: string): string {
+  const m = /^(\d{2}):(\d{2})$/.exec(hhmm);
+  if (!m || !twelveHour()) return hhmm;
+  return dtf({ hour: "numeric", minute: "2-digit" }).format(new Date(2000, 0, 1, Number(m[1]) % 24, Number(m[2])));
+}
+
 /** "Oct 6", or "Oct 6, 2024" outside the current year. */
 export function shortDate(iso: string | null | undefined): string {
   if (!iso) return "";

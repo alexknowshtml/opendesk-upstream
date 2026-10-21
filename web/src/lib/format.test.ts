@@ -1,6 +1,6 @@
 import { afterEach, beforeAll, describe, expect, it } from "vitest";
 import { i18n, resetLocale, setLocale } from "@/i18n";
-import { bytes, clock, compact, currency, dayLabel, formatUsd, fullDate, minutes, number, percent, relLong, relShort, setClock, shortDate, weekdayClock } from "./format";
+import { bytes, clock, compact, currency, dayLabel, formatUsd, fullDate, minutes, number, percent, relLong, relShort, setClock, shortDate, timeOfDay, twelveHour, weekdayClock } from "./format";
 
 const NOW = Date.parse("2026-10-11T12:00:00Z");
 const ago = (ms: number) => new Date(NOW - ms).toISOString();
@@ -132,5 +132,25 @@ describe("format, the person's clock", () => {
     setClock("12h");
     await setLocale("de", ["common"]);
     expect(clock(AFTERNOON)).toBe("14:05");
+  });
+});
+
+describe("stored times of day", () => {
+  it("reads HH:mm on the person's clock", () => {
+    setClock("12h");
+    expect(twelveHour()).toBe(true);
+    expect(sp(timeOfDay("09:00"))).toBe("9:00 AM");
+    expect(sp(timeOfDay("17:30"))).toBe("5:30 PM");
+    expect(sp(timeOfDay("00:00"))).toBe("12:00 AM");
+    expect(sp(timeOfDay("24:00"))).toBe("12:00 AM");
+    setClock("24h");
+    expect(twelveHour()).toBe(false);
+    expect(timeOfDay("09:00")).toBe("09:00");
+    expect(timeOfDay("24:00")).toBe("24:00");
+  });
+  it("follows the locale on auto", async () => {
+    await setLocale("de", ["common"]);
+    expect(twelveHour()).toBe(false);
+    expect(timeOfDay("17:30")).toBe("17:30");
   });
 });
