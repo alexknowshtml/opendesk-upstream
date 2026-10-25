@@ -17,8 +17,11 @@ export type User = {
   avatar_source: AvatarSource | null;
   email_verified: boolean;
   totp_enabled: boolean;
+  /** The clock for times in the app and notification emails; "auto" follows the browser's locale in the app and 24-hour in emails. */
+  time_format: TimeFormat;
   created_at: string;
 };
+export type TimeFormat = "auto" | "12h" | "24h";
 export type UserRef = { id: string; name: string; email: string; avatar_url: string | null };
 
 export type WorkspaceSettings = {
@@ -651,7 +654,7 @@ export type AutomationTrigger = "ticket_created" | "customer_replied" | "agent_r
 export type ConditionField =
   | "subject" | "body" | "from_email" | "channel" | "mailbox_id" | "priority" | "severity" | "status" | "tag" | "sentiment" | "ai_decide"
   /** contracts/teams.md: equals/not_equals with an id (team and widget also "none"); received_at also contains. */
-  | "team_id" | "brand_id" | "widget_id" | "received_at"
+  | "assignee_id" | "team_id" | "brand_id" | "widget_id" | "received_at"
   /** A ticket custom field, or the ticket contact's. */
   | `field.${string}` | `contact.field.${string}`;
 /** `eq` is the AI sentiment condition's operator (contracts/ai.md). */
@@ -1207,6 +1210,9 @@ export type ReportsOverview = {
 export type ReportsGroup = { created: number; solved: number; open_now: number; first_response_p50_minutes: number | null };
 
 export type MailboxTestLeg = { ok: boolean; error: string; /** The server's reply, scrubbed. */ detail?: string };
+/** GET /v1/mailboxes/{id}/usage: the tickets that reply from a mailbox, before removing it. */
+export type MailboxUsage = { tickets: number; open: number };
+
 export type MailboxTest = {
   inbound: MailboxTestLeg;
   outbound: MailboxTestLeg;

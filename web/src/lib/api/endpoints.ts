@@ -189,7 +189,7 @@ export const api = {
   me: {
     get: () => http.get<T.Me>("/v1/me", { workspace: false }),
     /** `avatar_url` is an https picture to copy (processed in the background), or "" to remove it. */
-    update: (b: { name?: string; avatar_url?: string }) => http.patch<T.User>("/v1/me", b, { workspace: false }),
+    update: (b: { name?: string; avatar_url?: string; time_format?: T.TimeFormat }) => http.patch<T.User>("/v1/me", b, { workspace: false }),
     /** PNG, JPEG, GIF or WebP, at most 5 MB. */
     uploadAvatar: (file: File | Blob) => http.put<T.User>("/v1/me/avatar", imageForm(file), { workspace: false }),
     removeAvatar: () => http.del<T.User>("/v1/me/avatar", undefined, { workspace: false }),
@@ -221,7 +221,7 @@ export const api = {
     removeImage: (slot: "logo" | T.WorkspaceImageSlot) => http.del<T.Workspace>(`/v1/workspace/images/${slot}`),
   },
   members: {
-    list: () => http.get<T.Page<T.Member>>("/v1/members"),
+    list: (q?: ListQuery) => http.get<T.Page<T.Member>>("/v1/members", { query: q }),
     update: (userId: string, role: T.Role) => http.patch<T.Member>(`/v1/members/${userId}`, { role }),
     remove: (userId: string) => http.del(`/v1/members/${userId}`),
     /** `userId` may be "me". Members set their own availability; admins anyone's, and the cap. */
@@ -536,6 +536,7 @@ export const api = {
     ...crud<T.Mailbox, Partial<CreateMailboxBody> & Partial<Pick<T.Mailbox, "signature_html" | "auto_reply_enabled" | "auto_reply_subject" | "auto_reply_html" | "status" | "ai_answers" | "ai_answers_mode" | "ai_answers_outside_hours" | "trusted_form_senders" | "personal_replies">> & { bot_id?: string | null; alias_settings?: Record<string, T.AliasSettingsInput> }>("/v1/mailboxes"),
     create: (b: CreateMailboxBody) => http.create<T.Mailbox>("/v1/mailboxes", b),
     test: (id: string) => http.post<T.MailboxTest>(`/v1/mailboxes/${id}/test`),
+    usage: (id: string) => http.get<T.MailboxUsage>(`/v1/mailboxes/${id}/usage`),
     /** Reads Gmail's send-as list again (422 send_as_unreadable for a send-only connection). */
     checkSendAs: (id: string) => http.post<T.Mailbox>(`/v1/mailboxes/${id}/send-as/check`),
     /**

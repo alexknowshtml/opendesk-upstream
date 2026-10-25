@@ -183,7 +183,9 @@ the encoding, a line that cannot be read, more than 500,000 rows, no rows under 
 - Messages keep their author, time, recipients and HTML (sanitized like every email body). A message
   by an agent mapped to a member is that member's; an unmapped agent's keeps their name and address.
   Intercom bot replies (Fin, workflows) are the team's, named Fin. At most 2,000 messages per ticket
-  (Intercom answers at most 500 parts of a conversation); the rest is listed in `problems`. Front drafts
+  (Intercom answers at most 500 parts of a conversation); the rest is listed in `problems`. An email
+  reply's quoted history and signature are cut the way an inbound email's are, with the whole original
+  kept behind it (`full_html`); notes, chats and forwards keep everything. Front drafts
   are left out; a Front conversation that is not email (chat, SMS, social) is tagged `front-<channel>`.
   Front's read-receipt pixel is dropped and images it proxied get their original link back. Front emails
   get `message_id`, `in_reply_to` and `references` in the threading phase, read from `GET /messages/{id}`
