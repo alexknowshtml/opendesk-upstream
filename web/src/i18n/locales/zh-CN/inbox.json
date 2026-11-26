@@ -96,6 +96,9 @@
     "loadError": "无法加载这个工单",
     "back": "返回列表",
     "movedPrivate": "这个工单已移到私有团队",
+    "followUpOf": "#{{number}} 的后续",
+    "followUpHidden": "之前工单的后续",
+    "followUpHint": "#{{number}} 关闭后客户再次来信",
     "copyForAgent": "复制工单给 AI 智能体"
   },
   "commands": {
@@ -267,6 +270,10 @@
       "description": "当地址、聊天组件或路由规则把新会话发给这个团队时，它们会显示在这里。",
       "seeOpen": "查看待处理工单",
       "seeUnassigned": "查看未分配"
+    },
+    "all": {
+      "title": "暂无工单",
+      "description": "这里显示所有状态的工单，垃圾邮件除外。"
     }
   },
   "error": {
